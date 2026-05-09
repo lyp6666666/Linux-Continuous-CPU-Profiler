@@ -1,0 +1,26 @@
+.DS_Store
+
+# Build outputs
+bin/
+dist/
+target/
+coverage/
+
+# Runtime data
+data/
+profiles/
+*.perf
+*.data
+*.svg
+*.log
+*.pid
+
+# Local environments
+.env
+.env.*
+.venv/
+node_modules/
+
+# Editor metadata
+.idea/
+.vscode/
