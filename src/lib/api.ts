@@ -1,6 +1,6 @@
 import express from "express";
 import { buildFlamegraphSvg } from "./flamegraph.js";
-import { readHealth, loadSession, readSessions, resolveStoragePaths } from "./storage.js";
+import { findNearestSession, findSessionAt, readHealth, loadSession, readSessions, resolveStoragePaths } from "./storage.js";
 import { runDoctor } from "./doctor.js";
 
 export function createApi(dataDir = "./data") {
@@ -14,6 +14,21 @@ export function createApi(dataDir = "./data") {
 
   router.get("/sessions", async (_req, res) => {
     res.json(await readSessions(paths));
+  });
+
+  router.get("/sessions/query", async (req, res) => {
+    const at = typeof req.query.at === "string" ? new Date(req.query.at) : new Date(NaN);
+    if (Number.isNaN(at.getTime())) {
+      res.status(400).json({ message: "invalid at timestamp" });
+      return;
+    }
+    const matched = await findSessionAt(paths, at);
+    const nearest = matched ?? await findNearestSession(paths, at);
+    res.json({
+      at: at.toISOString(),
+      matched: Boolean(matched),
+      session: nearest
+    });
   });
 
   router.get("/sessions/:id", async (req, res) => {
@@ -40,4 +55,3 @@ export function createApi(dataDir = "./data") {
 
   return { router, paths };
 }
-

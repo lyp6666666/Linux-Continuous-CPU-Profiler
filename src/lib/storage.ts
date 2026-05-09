@@ -1,5 +1,5 @@
 import { mkdir, readFile, readdir, stat, writeFile, appendFile, rm } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { join } from "node:path";
 import type { HealthSnapshot, SessionRecord } from "../types.js";
 import { demoHealth, demoSessions } from "./demo.js";
 
@@ -43,6 +43,29 @@ export async function saveSession(paths: StoragePaths, session: SessionRecord): 
 export async function loadSession(paths: StoragePaths, id: string): Promise<SessionRecord | undefined> {
   const sessions = await readSessions(paths);
   return sessions.find((item) => item.id === id);
+}
+
+export async function findSessionAt(paths: StoragePaths, at: Date): Promise<SessionRecord | undefined> {
+  const target = at.getTime();
+  const sessions = await readSessions(paths);
+  return sessions.find((session) => {
+    const start = new Date(session.startTime).getTime();
+    const end = new Date(session.endTime).getTime();
+    return start <= target && target <= end;
+  });
+}
+
+export async function findNearestSession(paths: StoragePaths, at: Date): Promise<SessionRecord | undefined> {
+  const target = at.getTime();
+  const sessions = await readSessions(paths);
+  return sessions
+    .map((session) => {
+      const start = new Date(session.startTime).getTime();
+      const end = new Date(session.endTime).getTime();
+      const distance = target < start ? start - target : target > end ? target - end : 0;
+      return { session, distance };
+    })
+    .sort((a, b) => a.distance - b.distance)[0]?.session;
 }
 
 export async function storageBytes(paths: StoragePaths): Promise<number> {
@@ -96,4 +119,3 @@ export async function pruneOldSessions(paths: StoragePaths, maxItems: number): P
   const content = `${keep.map((item) => JSON.stringify(item)).join("\n")}${keep.length ? "\n" : ""}`;
   await writeFile(paths.indexFile, content, "utf8");
 }
-

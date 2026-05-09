@@ -3,11 +3,11 @@ import type { SessionRecord } from "../types.js";
 
 function buildStacks(seed: string, peak: number): Array<{ name: string; weight: number }> {
   return [
-    { name: `${seed}::BatchJob::compactAndDelete`, weight: peak },
-    { name: `${seed}::GcWorker::scanRoots`, weight: Math.max(peak - 12, 18) },
-    { name: `${seed}::Lock::spinUntilReady`, weight: Math.max(peak - 22, 12) },
-    { name: `${seed}::Json::parseLargePayload`, weight: Math.max(peak - 30, 10) },
-    { name: `${seed}::Kernel::softirq_dispatch`, weight: Math.max(peak - 36, 8) }
+    { name: `${seed}::批量任务::压缩清理`, weight: peak },
+    { name: `${seed}::运行时::根对象扫描`, weight: Math.max(peak - 12, 18) },
+    { name: `${seed}::锁竞争::忙等自旋`, weight: Math.max(peak - 22, 12) },
+    { name: `${seed}::JSON解析::大负载处理`, weight: Math.max(peak - 30, 10) },
+    { name: `${seed}::内核软中断::调度分发`, weight: Math.max(peak - 36, 8) }
   ];
 }
 

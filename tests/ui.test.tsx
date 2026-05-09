@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent } from "@testing-library/react";
 import { App } from "../src/ui/App.js";
 
 const sessions = [
@@ -39,6 +40,9 @@ beforeEach(() => {
     if (href.endsWith("/sessions")) {
       return new Response(JSON.stringify(sessions), { status: 200 });
     }
+    if (href.includes("/sessions/query")) {
+      return new Response(JSON.stringify({ matched: true, session: sessions[0] }), { status: 200 });
+    }
     return new Response("<svg><text>火焰图预览</text></svg>", { status: 200 });
   }) as unknown as typeof fetch);
 });
@@ -49,5 +53,7 @@ describe("ui", () => {
     await waitFor(() => expect(screen.getByText("故障现场控制台")).toBeInTheDocument());
     expect(screen.getAllByText("service-a").length).toBeGreaterThan(0);
     expect(screen.getByText("火焰图预览")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("按时间点调出采样"));
+    await waitFor(() => expect(screen.getByText("已命中该时间点的采样窗口。")).toBeInTheDocument());
   });
 });

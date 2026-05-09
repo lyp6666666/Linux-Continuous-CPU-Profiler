@@ -4,13 +4,24 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { existsSync, readFileSync } from "node:fs";
 import { createApi } from "../src/lib/api.js";
+import { resolveStoragePaths } from "../src/lib/storage.js";
+import { startContinuousMockSampler } from "../src/lib/record.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-export function createServer({ port = 8787, dataDir = "./data" } = {}) {
+export function createServer({ port = 8787, dataDir = "./data", enableSampler = process.env.NODE_ENV !== "test" } = {}) {
   const app = express();
   const { router, paths } = createApi(dataDir);
+  const sampler = enableSampler
+    ? startContinuousMockSampler(resolveStoragePaths(dataDir), {
+      service: "service-a",
+      targetType: "cgroup",
+      targetValue: "/sys/fs/cgroup/system.slice/service-a.service",
+      windowSeconds: 15,
+      maxItems: 240
+    })
+    : undefined;
 
   app.use(cors());
   app.use(express.json());
@@ -36,6 +47,7 @@ export function createServer({ port = 8787, dataDir = "./data" } = {}) {
   return {
     app,
     paths,
+    sampler,
     start() {
       return new Promise<void>((resolve) => {
         app.listen(port, () => resolve());

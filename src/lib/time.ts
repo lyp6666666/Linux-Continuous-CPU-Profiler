@@ -26,3 +26,13 @@ export function addMinutes(base: Date, minutes: number): Date {
   return new Date(base.getTime() + minutes * 60_000);
 }
 
+export function toLocalInputValue(value: string | Date): string {
+  const date = typeof value === "string" ? new Date(value) : value;
+  const offsetMs = date.getTimezoneOffset() * 60_000;
+  const local = new Date(date.getTime() - offsetMs);
+  return local.toISOString().slice(0, 16);
+}
+
+export function fromLocalInputValue(value: string): Date {
+  return new Date(value);
+}

@@ -2,12 +2,14 @@ import { useEffect, useMemo, useState } from "react";
 import { Activity, Clock3, Flame, HardDriveDownload, ShieldCheck, TerminalSquare, Zap } from "lucide-react";
 import type { HealthSnapshot, SessionRecord } from "../types.js";
 import { formatBytes, formatCount } from "../lib/format.js";
-import { formatTime } from "../lib/time.js";
+import { formatTime, fromLocalInputValue, toLocalInputValue } from "../lib/time.js";
 
 type FetchState = {
   sessions: SessionRecord[];
   health?: HealthSnapshot;
   selectedId?: string;
+  queryAt: string;
+  queryHint?: string;
   loading: boolean;
   error?: string;
 };
@@ -15,7 +17,7 @@ type FetchState = {
 const fallbackSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 320"><rect width="100%" height="100%" fill="#0a0d12"/><text x="40" y="80" fill="#d6dee9" font-size="20" font-family="sans-serif">尚未选择采样记录</text></svg>`;
 
 export function App() {
-  const [state, setState] = useState<FetchState>({ sessions: [], loading: true });
+  const [state, setState] = useState<FetchState>({ sessions: [], loading: true, queryAt: "" });
 
   async function load() {
     try {
@@ -29,11 +31,13 @@ export function App() {
         sessions,
         health,
         selectedId: sessions[0]?.id,
+        queryAt: sessions[0] ? toLocalInputValue(sessions[0].startTime) : "",
         loading: false
       });
     } catch (error) {
       setState({
         sessions: [],
+        queryAt: "",
         loading: false,
         error: error instanceof Error ? error.message : "failed to load"
       });
@@ -50,6 +54,32 @@ export function App() {
   );
 
   const flamegraph = selected ? `/api/sessions/${selected.id}/flamegraph` : undefined;
+
+  async function queryByAt() {
+    if (!state.queryAt) {
+      setState((prev) => ({ ...prev, queryHint: "请先输入故障时间点。" }));
+      return;
+    }
+    const at = fromLocalInputValue(state.queryAt).toISOString();
+    const response = await fetch(`/api/sessions/query?at=${encodeURIComponent(at)}`);
+    if (!response.ok) {
+      setState((prev) => ({ ...prev, queryHint: "查询失败，请检查时间格式。" }));
+      return;
+    }
+    const payload = await response.json() as { matched: boolean; session?: SessionRecord };
+    if (payload.session) {
+      setState((prev) => ({
+        ...prev,
+        sessions: prev.sessions.some((session) => session.id === payload.session?.id)
+          ? prev.sessions.map((session) => session.id === payload.session?.id ? payload.session! : session)
+          : [payload.session!, ...prev.sessions],
+        selectedId: payload.session?.id,
+        queryHint: payload.matched ? "已命中该时间点的采样窗口。" : "未精确命中，已切换到最近窗口。"
+      }));
+    } else {
+      setState((prev) => ({ ...prev, queryHint: "没有找到可用的采样窗口。" }));
+    }
+  }
 
   return (
     <div className="shell">
@@ -74,6 +104,25 @@ export function App() {
             <Metric label="采样引擎状态" value={state.health?.perfAvailable ? "可用" : "演示"} />
           </div>
           <p className="panel-note">{state.health?.message ?? "正在加载健康快照..."}</p>
+        </section>
+
+        <section className="panel query-panel">
+          <div className="panel-title">
+            <TerminalSquare size={16} />
+            故障时间点查询
+          </div>
+          <div className="query-stack">
+            <label className="query-label" htmlFor="query-at">输入故障时间点</label>
+            <input
+              id="query-at"
+              type="datetime-local"
+              className="query-input"
+              value={state.queryAt}
+              onChange={(event) => setState((prev) => ({ ...prev, queryAt: event.target.value }))}
+            />
+            <button className="query-button" onClick={() => void queryByAt()}>按时间点调出采样</button>
+            <p className="panel-note">{state.queryHint ?? "输入任意故障时间点，系统会定位当时或最近的采样窗口。"}</p>
+          </div>
         </section>
 
         <section className="panel list-panel">
@@ -142,11 +191,13 @@ export function App() {
               火焰图预览
             </div>
             {selected ? (
-              <img
-                alt="火焰图"
-                src={flamegraph}
-                className="flame-iframe"
-              />
+              <div className="flame-frame">
+                <img
+                  alt="火焰图"
+                  src={flamegraph}
+                  className="flame-image"
+                />
+              </div>
             ) : (
               <div className="flame-frame" dangerouslySetInnerHTML={{ __html: fallbackSvg }} />
             )}

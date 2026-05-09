@@ -38,19 +38,24 @@ button {
 
 .shell {
   display: grid;
-  grid-template-columns: 320px 1fr;
+  grid-template-columns: minmax(280px, 310px) minmax(0, 1fr);
   min-height: 100vh;
+  overflow-x: hidden;
 }
 
 .rail {
+  min-width: 0;
   padding: 20px;
   border-right: 1px solid var(--border);
   background: rgba(8, 11, 16, 0.86);
 }
 
 .workspace {
+  min-width: 0;
   padding: 20px;
   display: grid;
+  align-content: start;
+  grid-auto-rows: max-content;
   gap: 16px;
 }
 
@@ -88,6 +93,7 @@ h1, .headline {
 }
 
 .panel {
+  min-width: 0;
   border: 1px solid var(--border);
   background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent), var(--panel);
   border-radius: 8px;
@@ -114,7 +120,7 @@ h1, .headline {
 .metric, .detail-row {
   display: grid;
   gap: 4px;
-  padding: 12px;
+  padding: 10px 11px;
   border-radius: 6px;
   background: var(--panel-strong);
   border: 1px solid #202a39;
@@ -133,6 +139,38 @@ h1, .headline {
 .panel-note {
   margin: 12px 0 0;
   line-height: 1.5;
+}
+
+.query-panel {
+  padding: 18px 20px;
+}
+
+.query-stack {
+  display: grid;
+  gap: 10px;
+}
+
+.query-label {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.query-input {
+  width: 100%;
+  border: 1px solid #1e2734;
+  background: #0e131a;
+  color: var(--text);
+  border-radius: 6px;
+  padding: 10px 12px;
+}
+
+.query-button {
+  border: 1px solid rgba(245, 179, 63, 0.45);
+  background: rgba(245, 179, 63, 0.14);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 10px 12px;
+  cursor: pointer;
 }
 
 .list-panel {
@@ -193,6 +231,7 @@ h1, .headline {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  align-self: start;
   padding: 18px 20px;
 }
 
@@ -257,37 +296,33 @@ h1, .headline {
 
 .content-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.7fr) minmax(280px, 0.9fr);
+  grid-template-columns: minmax(0, 1fr) clamp(240px, 22vw, 300px);
   gap: 16px;
 }
 
 .flame-panel, .detail-panel {
   min-height: 560px;
-  padding: 18px 20px;
+  padding: 16px 18px;
 }
 
 .flame-frame {
   width: 100%;
-  min-height: 480px;
+  min-height: 0;
   border: 1px solid #1f2836;
   border-radius: 6px;
   background: #0a0d12;
   overflow: hidden;
 }
 
-.flame-iframe {
+.flame-image {
   width: 100%;
-  height: auto;
-  min-height: 0;
   display: block;
-  border: 1px solid #1f2836;
-  border-radius: 6px;
-  background: #0a0d12;
+  height: auto;
 }
 
 .summary-box {
   margin-top: 14px;
-  padding: 14px;
+  padding: 12px;
   border-radius: 6px;
   background: #11161d;
   border: 1px solid #203040;
@@ -316,7 +351,7 @@ h1, .headline {
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  padding: 10px 12px;
+  padding: 9px 11px;
   border-radius: 6px;
   background: #10151d;
   border: 1px solid #202a39;

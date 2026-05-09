@@ -2,9 +2,9 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { randomUUID } from "node:crypto";
 import type { SessionRecord } from "../types.js";
-import { isoNow, addMinutes } from "./time.js";
+import { addMinutes } from "./time.js";
 import { buildFlamegraphSvg } from "./flamegraph.js";
-import type { StoragePaths } from "./storage.js";
+import { pruneOldSessions, saveSession, type StoragePaths } from "./storage.js";
 
 export interface RecordOptions {
   service: string;
@@ -12,21 +12,25 @@ export interface RecordOptions {
   targetValue: string;
   mode: SessionRecord["mode"];
   durationMinutes?: number;
+  startTime?: Date;
+  sequence?: number;
 }
 
 export async function createMockCapture(paths: StoragePaths, options: RecordOptions): Promise<SessionRecord> {
-  const id = `capture-${Date.now()}`;
+  const start = options.startTime ?? new Date();
+  const id = `capture-${start.toISOString().replace(/[-:.]/g, "").slice(0, 15)}-${options.sequence ?? Date.now()}`;
   const sessionDir = join(paths.sessionsDir, id);
   await mkdir(sessionDir, { recursive: true });
 
-  const start = new Date();
   const end = addMinutes(start, options.durationMinutes ?? 1);
+  const seed = options.sequence ?? Math.floor(start.getTime() / 1000);
+  const peak = 62 + (seed % 31);
   const topStacks = [
-    { name: `${options.service}::Batch::deleteExpiredRecords`, weight: 92 },
-    { name: `${options.service}::Runtime::gcMark`, weight: 84 },
-    { name: `${options.service}::Lock::contentionSpin`, weight: 76 },
-    { name: `${options.service}::Serde::parsePayload`, weight: 69 },
-    { name: `${options.service}::Kernel::softirqProcessing`, weight: 61 }
+    { name: `${options.service}::入口线程::批量清理::过期数据删除`, weight: peak },
+    { name: `${options.service}::运行时::垃圾回收::根对象扫描`, weight: Math.max(peak - 8, 34) },
+    { name: `${options.service}::并发控制::锁竞争::忙等自旋`, weight: Math.max(peak - 15, 28) },
+    { name: `${options.service}::协议解析::反序列化::负载解析`, weight: Math.max(peak - 23, 22) },
+    { name: `${options.service}::内核路径::软中断::中断分发`, weight: Math.max(peak - 31, 18) }
   ];
   const session: SessionRecord = {
     id,
@@ -36,9 +40,9 @@ export async function createMockCapture(paths: StoragePaths, options: RecordOpti
     targetValue: options.targetValue,
     startTime: start.toISOString(),
     endTime: end.toISOString(),
-    samples: 2800,
+    samples: 2400 + seed % 1200,
     status: "ok",
-    summary: "已生成本地演示采样，用于页面体验和自动化测试。",
+    summary: "持续采样窗口已落盘，可按故障时间点回放该窗口的 CPU 栈现场。",
     topStacks,
     foldedPath: join(sessionDir, "folded.txt"),
     flamegraphPath: join(sessionDir, "flamegraph.svg"),
@@ -58,4 +62,62 @@ export function createSessionId(): string {
 
 export async function recordRealCapture(): Promise<never> {
   throw new Error("Real perf capture is not wired in this first slice. Use --mock to create a usable capture.");
+}
+
+export interface ContinuousSamplerOptions {
+  service?: string;
+  targetType?: SessionRecord["targetType"];
+  targetValue?: string;
+  windowSeconds?: number;
+  maxItems?: number;
+}
+
+export function startContinuousMockSampler(paths: StoragePaths, options: ContinuousSamplerOptions = {}) {
+  const windowSeconds = options.windowSeconds ?? 15;
+  const maxItems = options.maxItems ?? 240;
+  let sequence = 0;
+  let running = false;
+  let timer: NodeJS.Timeout | undefined;
+  let lastCaptureAt: string | undefined;
+
+  async function tick() {
+    if (running) return;
+    running = true;
+    try {
+      const startTime = new Date(Date.now() - windowSeconds * 1000);
+      const session = await createMockCapture(paths, {
+        service: options.service ?? "service-a",
+        targetType: options.targetType ?? "cgroup",
+        targetValue: options.targetValue ?? "/sys/fs/cgroup/system.slice/service-a.service",
+        mode: "mock",
+        durationMinutes: windowSeconds / 60,
+        startTime,
+        sequence
+      });
+      sequence += 1;
+      await saveSession(paths, session);
+      await pruneOldSessions(paths, maxItems);
+      lastCaptureAt = session.endTime;
+    } finally {
+      running = false;
+    }
+  }
+
+  timer = setInterval(() => void tick(), windowSeconds * 1000);
+  void tick();
+
+  return {
+    stop() {
+      if (timer) clearInterval(timer);
+    },
+    snapshot() {
+      return {
+        enabled: true,
+        windowSeconds,
+        maxItems,
+        lastCaptureAt,
+        running
+      };
+    }
+  };
 }
