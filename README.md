@@ -22,6 +22,61 @@
 - 存储层：本地环形保留，按时间索引 profile 文件，支持磁盘配额和 TTL。
 - 查询层：按故障时间点选取相邻采样窗口，生成 folded stack 与火焰图。
 - 运维层：提供 systemd 服务、健康检查、指标上报、权限检查和降级策略。
+- 前端层：React + Vite 构建事故控制台，展示采集 session、健康状态、时间线和火焰图预览。
+
+## 技术栈
+
+- Node.js 20+
+- TypeScript
+- React 19 + Vite
+- Express
+- Commander
+- Vitest + React Testing Library + Supertest
+
+选择这套栈的原因是 CLI、API、前端和测试可以共用 TypeScript 类型；本地没有 Linux `perf` 权限时，也可以通过 mock mode 先跑通基本产品体验。
+
+## 本地运行
+
+安装依赖：
+
+```bash
+npm install
+```
+
+生成一组 mock 采样数据：
+
+```bash
+npm run seed
+```
+
+启动开发模式：
+
+```bash
+npm run dev
+```
+
+打开 Vite 输出的本地地址，默认是 `http://localhost:5173`。
+
+CLI 示例：
+
+```bash
+npm run cli -- doctor
+npm run cli -- record --service service-a --mock
+npm run cli -- list
+```
+
+## 测试
+
+```bash
+npm test
+npm run build
+```
+
+当前测试覆盖：
+
+- session 写入、读取、裁剪
+- API 健康检查、session 查询、火焰图输出
+- 前端事故控制台首屏渲染
 
 ## 仓库状态
 
