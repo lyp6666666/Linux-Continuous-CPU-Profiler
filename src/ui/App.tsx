@@ -55,9 +55,9 @@ export function App() {
     <div className="shell">
       <aside className="rail rail-left">
         <div className="brand">
-          <div className="brand-mark">CP</div>
+          <div className="brand-mark">采样</div>
           <div>
-            <div className="eyebrow">持续 CPU Profiling</div>
+            <div className="eyebrow">持续 CPU 采样</div>
             <h1>故障现场控制台</h1>
           </div>
         </div>
@@ -71,7 +71,7 @@ export function App() {
             <Metric label="采样记录" value={state.health ? formatCount(state.health.sessionCount) : "—"} />
             <Metric label="存储占用" value={state.health ? formatBytes(state.health.storageBytes) : "—"} />
             <Metric label="运行模式" value={state.health ? formatMode(state.health.activeMode) : "—"} />
-            <Metric label="Perf 状态" value={state.health?.perfAvailable ? "可用" : "演示"} />
+            <Metric label="采样引擎状态" value={state.health?.perfAvailable ? "可用" : "演示"} />
           </div>
           <p className="panel-note">{state.health?.message ?? "正在加载健康快照..."}</p>
         </section>
