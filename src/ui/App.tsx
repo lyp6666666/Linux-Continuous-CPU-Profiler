@@ -141,13 +141,14 @@ export function App() {
               <Flame size={16} />
               火焰图预览
             </div>
-            <div className="flame-frame" dangerouslySetInnerHTML={{ __html: flamegraph ? "" : fallbackSvg }} />
-            {selected && (
-              <iframe
-                title="火焰图"
+            {selected ? (
+              <img
+                alt="火焰图"
                 src={flamegraph}
                 className="flame-iframe"
               />
+            ) : (
+              <div className="flame-frame" dangerouslySetInnerHTML={{ __html: fallbackSvg }} />
             )}
           </article>
 

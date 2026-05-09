@@ -267,12 +267,19 @@ h1, .headline {
 }
 
 .flame-frame {
-  display: none;
+  width: 100%;
+  min-height: 480px;
+  border: 1px solid #1f2836;
+  border-radius: 6px;
+  background: #0a0d12;
+  overflow: hidden;
 }
 
 .flame-iframe {
   width: 100%;
-  height: 480px;
+  height: auto;
+  min-height: 0;
+  display: block;
   border: 1px solid #1f2836;
   border-radius: 6px;
   background: #0a0d12;
